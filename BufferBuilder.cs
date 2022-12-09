@@ -59,6 +59,11 @@ namespace BufferUtilities
             Append(GetAppendBytes(value, byteCount), 0, byteCount);
             return this;
         }
+        public  BufferBuilder Append(int value, int byteCount = 4)
+        {
+            Append(GetAppendBytes(value, byteCount), 0, byteCount);
+            return this;
+        }
         public  BufferBuilder Append(ulong value, int byteCount = 8)
         {
             Append(GetAppendBytes(value, byteCount), 0, byteCount);
@@ -127,6 +132,44 @@ namespace BufferUtilities
 
         }
 
+        
+        private void ValidateSize(long num, int byteCount)
+        {
+            var throwError = false;
+            var val = Math.Abs(num);
+            switch (byteCount)
+            {
+                case 1:
+                    throwError = val > byte.MaxValue;
+                    break;
+                case 2:
+                    throwError = val > ushort.MaxValue;
+                    break;
+                case 3:
+                    throwError = val > 0xFFFFFF;
+                    break;
+                case 4:
+                    throwError = val > long.MaxValue/16;
+                    break;
+                case 5:
+                    throwError = val > long.MaxValue/8;
+                    break;
+                case 6:
+                    throwError = val > long.MaxValue/4;
+                    break;
+                case 7:
+                    throwError = val > long.MaxValue/2;
+                    break;
+                case 8:
+                    break;
+                default:
+                    throwError = true;
+                    break;
+            }
+            if (throwError)
+                throw new IndexOutOfRangeException("Length of array is too small for the type.");
+
+        }
         private byte[] GetAppendBytes(ulong num, int byteCount)
         {
             
@@ -136,6 +179,14 @@ namespace BufferUtilities
         }
 
         private byte[] GetAppendBytes(uint num, int byteCount)
+        {
+            
+            ValidateSize(num, byteCount);
+            var bytes = BitConverter.GetBytes(num);
+            return bytes.Trim(byteCount);
+        }
+
+        private byte[] GetAppendBytes(int num, int byteCount)
         {
             
             ValidateSize(num, byteCount);
@@ -223,6 +274,27 @@ namespace BufferUtilities
             var bytesRead = await stream.ReadAsync(buff, position, len);
             Append(buff, 0, bytesRead);
             return bytesRead;
+        }
+
+        public BufferBuilder Append(char[] charArray)
+        {
+            foreach (var c in charArray)
+            {
+                Append(c);
+            }
+
+            return this;
+        }
+
+        public Stream GetStream()
+        {
+            _memStream.Position = 0;
+            return _memStream;
+        }
+
+        public BinaryReader GetReader()
+        {
+            return new BinaryReader(GetStream());
         }
     }
 }
